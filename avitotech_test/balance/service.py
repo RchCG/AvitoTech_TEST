@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import select, update, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from avitotech_test.balance.models import User, Balance
@@ -12,75 +12,96 @@ class UserDAL:
         self.db_session = db_session
 
     async def create_user(self, id: UUID):
-        created_user = User(id=id)
-        self.db_session.add(created_user)
-        await self.db_session.flush()  # Сначала добавляем пользователя в базу данных
+        try:
+            created_user = User(id=id)
+            self.db_session.add(created_user)
+            await self.db_session.flush()  # Сначала добавляем пользователя в базу данных
 
-        created_balance = Balance(user_id=created_user.id)  # Здесь используется user_id
-        self.db_session.add(created_balance)
-        await self.db_session.flush()  # Затем добавляем баланс и сохраняем изменения
+            created_balance = Balance(user_id=created_user.id)
+            self.db_session.add(created_balance)
+            await self.db_session.flush()  # Затем добавляем баланс и сохраняем изменения
 
-        return created_user
+            return created_user
+        except Exception as e:
+            return None
 
     async def add_money(self, user_id: UUID, balance_id: UUID, amount: float):
-        query = update(Balance).where(
-            (Balance.balance_id == balance_id) &
-            (Balance.user_id == user_id)
-        ).values(balance_amount=Balance.balance_amount + amount)
+        query = update(Balance).where(and_(Balance.balance_id == balance_id, Balance.user_id == user_id)).values(
+            balance_amount=Balance.balance_amount + amount)
 
-        await self.db_session.execute(query)
-        await self.db_session.flush()
+        try:
+            await self.db_session.execute(query)
+            await self.db_session.flush()
+            return True
+        except Exception as e:
+            return False
 
     async def minus_money(self, user_id: UUID, balance_id: UUID, amount: float):
-        # Проверяем, что user_id совпадает как в таблице User, так и в таблице Balance
-        balance = select(Balance).where(
-            (Balance.balance_id == balance_id) &
-            (Balance.user_id == user_id)
-        )
+        try:
+            balance = select(Balance).where(and_(
+                Balance.balance_id == balance_id, Balance.user_id == user_id))
 
-        result = await self.db_session.execute(balance)
-        balance = result.scalar_one_or_none()
+            result = await self.db_session.execute(balance)
+            balance = result.scalar_one_or_none()
 
-        if balance:
-            new_balance_amount = balance.balance_amount - amount
-            if new_balance_amount >= 0:
-                query = update(Balance).where(
-                    (Balance.balance_id == balance_id) &
-                    (Balance.user_id == user_id)
-                ).values(balance_amount=new_balance_amount)
+            if balance:
+                new_balance_amount = balance.balance_amount - amount
+                if new_balance_amount >= 0:
+                    query = update(Balance).where(and_(
+                        Balance.balance_id == balance_id, Balance.user_id == user_id)).values(
+                        balance_amount=new_balance_amount)
 
-                await self.db_session.execute(query)
-                await self.db_session.flush()
-            else:
-                # Если списание приведет к отрицательному балансу, не выполняем обновление
-                raise ValueError("Insufficient balance")
+                    await self.db_session.execute(query)
+                    await self.db_session.flush()
+                    return True
+                else:
+                    return False
+        except Exception as e:
+            return False
 
     async def money_transfer(self, sender_id: UUID, recipient_id: UUID, sender_balance_id: UUID,
                              recipient_balance_id: UUID, amount: float):
-        sender_query = update(Balance).where(
-            (Balance.balance_id == sender_balance_id) &
-            (Balance.user_id == sender_id)
-        ).values(balance_amount=Balance.balance_amount - amount)
+        try:
+            sender_query = select(Balance).where(
+                and_(Balance.balance_id == sender_balance_id, Balance.user_id == sender_id))
 
-        recipient_query = update(Balance).where(
-            (Balance.balance_id == recipient_balance_id) &
-            (Balance.user_id == recipient_id)
-        ).values(balance_amount=Balance.balance_amount + amount)
+            recipient_query = select(Balance).where(
+                and_(Balance.balance_id == recipient_balance_id, Balance.user_id == recipient_id))
 
-        await self.db_session.execute(sender_query)
-        await self.db_session.execute(recipient_query)
-        await self.db_session.flush()
+            sender_result = await self.db_session.execute(sender_query)
+            recipient_result = await self.db_session.execute(recipient_query)
+            sender_balance = sender_result.scalar_one_or_none()
+            recipient_balance = recipient_result.scalar_one_or_none()
+
+            if sender_balance:
+                if sender_balance.balance_amount - amount >= 0:
+                    new_sender_amount = sender_balance.balance_amount - amount
+                    sender_query = update(Balance).where(
+                        and_(Balance.balance_id == recipient_balance_id, Balance.user_id == recipient_id)).values(
+                        balance_amount=new_sender_amount)
+
+                    new_recipent_amount = recipient_balance.balance_amount + amount
+                    recipient_query = update(Balance).where(
+                        and_(Balance.balance_id == recipient_balance_id, Balance.user_id == recipient_id)).values(
+                        balance_amount=new_recipent_amount)
+
+                    await self.db_session.execute(sender_query)
+                    await self.db_session.execute(recipient_query)
+                    await self.db_session.flush()
+
+                    return True
+                else:
+                    return False
+        except Exception as e:
+            return False
 
     async def check_balance(self, user_id: UUID, balance_id: UUID):
-        balance = select(Balance).where(
-            (Balance.balance_id == balance_id) &
-            (Balance.user_id == user_id)
-        )
-        result = await self.db_session.execute(balance)
-        balance_record = result.scalar_one_or_none()
+        try:
+            balance = select(Balance).where(and_(Balance.balance_id == balance_id, Balance.user_id == user_id))
+            result = await self.db_session.execute(balance)
+            balance_record = result.scalar_one_or_none()
 
-        if balance_record:
             return balance_record.balance_amount
-        else:
-            print(f"No balance found for user_id={user_id} and balance_id={balance_id}")
-            return None  # Возвращаем None, если баланс не найден
+
+        except Exception as e:
+            return False
