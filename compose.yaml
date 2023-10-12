@@ -1,5 +1,18 @@
 version: "3.0"
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    networks:
+      - custom
+    depends_on:
+      - db
+      - db_test
   db:
     container_name: "db"
     image: postgres:14.1-alpine
@@ -10,6 +23,11 @@ services:
       - POSTGRES_DB=postgres
     ports:
       - "5433:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -h db -p 5432 -U postgres" ]
+      interval: 5s
+      timeout: 10s
+      retries: 5
     networks:
       - custom
   db_test:
@@ -22,6 +40,11 @@ services:
       - POSTGRES_DB=postgres_test
     ports:
       - "5434:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -h db -p 5432 -U postgres" ]
+      interval: 5s
+      timeout: 10s
+      retries: 5
     networks:
       - custom
 networks:
