@@ -12,7 +12,11 @@ DB_USER = env('DB_USER')
 DB_PASSWORD = env('DB_PASSWORD')
 
 # Настройки для подключения к базе данных (подставьте свои значения)
-DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+# Settings for connetion to DB (insert yours)
+# DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+
+# or use test case URL
+DATABASE_URL = "postgresql+asyncpg://postgres:postgres@db:5432/postgres"
 
 # Создаём движок и сессию
 engine = create_async_engine(DATABASE_URL, future=True, echo=True)
@@ -22,7 +26,6 @@ Base = declarative_base()
 
 
 async def get_db():
-    """Dependency for getting async session"""
     try:
         AsyncSession = async_session()
         yield AsyncSession
