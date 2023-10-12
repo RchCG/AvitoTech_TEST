@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import select, update, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from avitotech_test.balance.models import User, Balance
+from avitotech_test.api.balance.models import User, Balance
 
 
 class UserDAL:
@@ -77,7 +77,7 @@ class UserDAL:
                 if sender_balance.balance_amount - amount >= 0:
                     new_sender_amount = sender_balance.balance_amount - amount
                     sender_query = update(Balance).where(
-                        and_(Balance.balance_id == recipient_balance_id, Balance.user_id == recipient_id)).values(
+                        and_(Balance.balance_id == sender_balance_id, Balance.user_id == sender_id)).values(
                         balance_amount=new_sender_amount)
 
                     new_recipent_amount = recipient_balance.balance_amount + amount

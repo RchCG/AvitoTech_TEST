@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from avitotech_test.balance.service import UserDAL
+from avitotech_test.api.balance.service import UserDAL
 
 
 async def register_new_user(id: UUID, db):

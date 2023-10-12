@@ -3,11 +3,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from avitotech_test.balance.router import register_new_user, replenishment, charge_off, checking_balance, transfer_money
+from avitotech_test.api.balance.router import register_new_user, replenishment, charge_off, checking_balance, transfer_money
 from avitotech_test.db.session import get_db
 
 balance_router = APIRouter(prefix="/api/v1/balance", tags=["UserBalance"])
-
 
 @balance_router.post("/create_user", tags=["UserBalance"], summary="Создание пользователя", status_code=201)
 async def create_user(user_id: UUID = None, db: AsyncSession = Depends(get_db)):
