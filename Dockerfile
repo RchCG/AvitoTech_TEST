@@ -24,6 +24,9 @@ RUN apt-get -y update && \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --no-cache-dir poetry
 
+
+
+
 WORKDIR /app
 
 COPY pyproject.toml poetry.lock ./
@@ -31,7 +34,4 @@ COPY . .
 
 RUN poetry update  # Обновление зависимостей
 RUN poetry install --no-root  # Установка зависимостей
-
-# Запуск приложения
-CMD ["/app/entrypoint.sh"]
-
+EXPOSE 8000
