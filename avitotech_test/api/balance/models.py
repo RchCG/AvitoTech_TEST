@@ -1,22 +1,22 @@
 import uuid
 from sqlalchemy import Column, Integer, String, UUID, Float, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 Base = declarative_base()
 
 
-class User(Base):  # Модель пользователя в БД
+class User(Base):
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True)
-    balance = relationship("Balance", uselist=False, back_populates="user")
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4, unique=True)
+    balance: Mapped["Balance"] = relationship(back_populates="user", uselist=False)
 
-
-class Balance(Base):  # Модель баланса пользователя в бд
+class Balance(Base):
     __tablename__ = "balances"
 
-    balance_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True)
-    user_id = Column(UUID, ForeignKey(User.id, ondelete="CASCADE"))
-    balance_amount = Column(Float, default=0, nullable=False)
-    user = relationship("User", back_populates="balance")
+    balance_id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4, unique=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(User.id, ondelete="CASCADE"))
+    balance_amount: Mapped[float] = mapped_column(default=0, nullable=False)
+    user: Mapped["User"] = relationship(back_populates="balance", uselist=False)
+
